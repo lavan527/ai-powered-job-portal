@@ -1,20 +1,17 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 
 export type UserRole = 'jobseeker' | 'recruiter' | null;
 
 interface User {
-  id: string;
+  id: number;
   name: string;
   email: string;
   role: UserRole;
-  skills?: string[];
-  company?: string;
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string, role: UserRole) => void;
-  register: (name: string, email: string, password: string, role: UserRole) => void;
+  setUser: (user: User | null) => void;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -22,38 +19,23 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+
   const [user, setUser] = useState<User | null>(null);
 
-  const login = (email: string, password: string, role: UserRole) => {
-    // Mock login
-    setUser({
-      id: '1',
-      name: role === 'recruiter' ? 'John Recruiter' : 'Jane Jobseeker',
-      email,
-      role,
-      skills: role === 'jobseeker' ? ['React', 'TypeScript', 'Node.js'] : undefined,
-      company: role === 'recruiter' ? 'Tech Corp' : undefined,
-    });
-  };
-
-  const register = (name: string, email: string, password: string, role: UserRole) => {
-    // Mock register
-    setUser({
-      id: '1',
-      name,
-      email,
-      role,
-      skills: role === 'jobseeker' ? [] : undefined,
-      company: role === 'recruiter' ? 'New Company' : undefined,
-    });
-  };
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+  }, []);
 
   const logout = () => {
+    localStorage.removeItem("user");
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, isAuthenticated: !!user }}>
+    <AuthContext.Provider value={{ user, setUser, logout, isAuthenticated: !!user }}>
       {children}
     </AuthContext.Provider>
   );
@@ -61,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;

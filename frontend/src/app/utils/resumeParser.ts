@@ -1,4 +1,9 @@
+import * as pdfjsLib from "pdfjs-dist";
+import worker from "pdfjs-dist/build/pdf.worker?url"; // ✅ FIXED WORKER
 import { Job } from '../data/jobs';
+
+// ✅ USE SAME VERSION WORKER (VERY IMPORTANT)
+pdfjsLib.GlobalWorkerOptions.workerSrc = worker;
 
 // Common tech skills to look for in resumes
 const COMMON_SKILLS = [
@@ -19,21 +24,17 @@ interface ParsedResume {
   keywords: string[];
 }
 
-/**
- * Extract skills and keywords from resume text
- */
+// 🧠 Extract skills
 export function parseResumeText(text: string): ParsedResume {
   const lowerText = text.toLowerCase();
   const foundSkills: string[] = [];
   
-  // Find matching skills
   COMMON_SKILLS.forEach(skill => {
     if (lowerText.includes(skill.toLowerCase())) {
       foundSkills.push(skill);
     }
   });
 
-  // Extract simple keywords (words longer than 3 chars that appear multiple times)
   const words = text.match(/\b[a-zA-Z]{4,}\b/g) || [];
   const wordFrequency: Record<string, number> = {};
   
@@ -62,54 +63,49 @@ interface JobMatch {
   matchReason: string;
 }
 
-/**
- * Calculate match percentage between resume and job
- */
-export function calculateJobMatches(resume: ParsedResume, jobs: Job[]): JobMatch[] {
+// 🤖 Match logic
+export function calculateJobMatches(resume: ParsedResume, jobs: any[]): JobMatch[] {
   const matches: JobMatch[] = [];
 
   jobs.forEach(job => {
-    const jobSkills = job.skills.map(s => s.toLowerCase());
+
+    const jobSkills = (job.skillsRequired || "")
+      .toLowerCase()
+      .split(",");
+
     const resumeSkills = resume.skills.map(s => s.toLowerCase());
-    
-    // Find matching skills
-    const matchedSkills = job.skills.filter(jobSkill =>
-      resumeSkills.includes(jobSkill.toLowerCase())
+
+    const matchedSkills = jobSkills.filter((js: string) =>
+      resumeSkills.some(rs => js.includes(rs))
     );
 
-    // Calculate base match percentage
     let matchPercentage = 0;
-    if (job.skills.length > 0) {
-      matchPercentage = (matchedSkills.length / job.skills.length) * 100;
+
+    if (jobSkills.length > 0) {
+      matchPercentage = (matchedSkills.length / jobSkills.length) * 100;
     }
 
-    // Boost if job title keywords appear in resume
     const titleWords = job.title.toLowerCase().split(' ');
     const resumeLower = resume.text.toLowerCase();
-    const titleMatches = titleWords.filter(word => 
+
+    const titleMatches = titleWords.filter(word =>
       word.length > 3 && resumeLower.includes(word)
     );
-    
+
     if (titleMatches.length > 0) {
       matchPercentage += 10;
     }
 
-    // Boost if company or location mentioned
-    if (resumeLower.includes(job.company.toLowerCase())) {
-      matchPercentage += 5;
-    }
-
-    // Cap at 100%
     matchPercentage = Math.min(Math.round(matchPercentage), 100);
 
-    // Determine match reason
     let matchReason = '';
+
     if (matchedSkills.length > 0) {
-      matchReason = `${matchedSkills.length} skill${matchedSkills.length > 1 ? 's' : ''} matched`;
+      matchReason = `${matchedSkills.length} skills matched`;
     } else if (titleMatches.length > 0) {
       matchReason = 'Role matches your experience';
     } else {
-      matchReason = 'Relevant to your profile';
+      matchReason = 'Relevant job';
     }
 
     if (matchPercentage > 0) {
@@ -122,59 +118,38 @@ export function calculateJobMatches(resume: ParsedResume, jobs: Job[]): JobMatch
     }
   });
 
-  // Sort by match percentage (highest first)
   matches.sort((a, b) => b.matchPercentage - a.matchPercentage);
 
   return matches;
 }
 
-/**
- * Read file as text (for PDF we'll simulate, in real app would use PDF parser)
- */
+// 📄 READ FILE (PDF + TXT)
 export async function readResumeFile(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    
-    reader.onload = (e) => {
-      const text = e.target?.result as string;
-      
-      // For demo: if PDF, simulate extracted text
-      if (file.type === 'application/pdf') {
-        // Simulate PDF extraction with sample resume text
-        resolve(`
-          Senior Frontend Developer
-          
-          EXPERIENCE
-          5+ years of experience in web development
-          Specialized in React, TypeScript, and modern JavaScript frameworks
-          Built scalable applications using Node.js and Next.js
-          Proficient in UI/UX design with Figma
-          Strong experience with AWS, Docker, and CI/CD pipelines
-          
-          SKILLS
-          React, TypeScript, JavaScript, Node.js, Next.js
-          Tailwind CSS, HTML, CSS, UI/UX Design
-          AWS, Docker, Kubernetes, PostgreSQL, MongoDB
-          Git, REST API, GraphQL, Agile, Microservices
-          Figma, Adobe XD, Prototyping
-          
-          EDUCATION
-          Bachelor's in Computer Science
-        `);
-      } else {
-        // For text files, use actual content
-        resolve(text);
+  try {
+    if (file.type === "application/pdf") {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+      let text = "";
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+
+        const pageText = content.items
+          .map((item: any) => item.str)
+          .join(" ");
+
+        text += pageText + " ";
       }
-    };
-    
-    reader.onerror = () => {
-      reject(new Error('Failed to read file'));
-    };
-    
-    if (file.type === 'application/pdf') {
-      reader.readAsArrayBuffer(file);
-    } else {
-      reader.readAsText(file);
+
+      return text;
     }
-  });
+
+    return await file.text();
+
+  } catch (error) {
+    console.error("Error reading file:", error);
+    throw error;
+  }
 }

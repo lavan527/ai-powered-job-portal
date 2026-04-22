@@ -21,7 +21,15 @@ export function JobMatchCard({
   onApply,
   showApplyButton = true
 }: JobMatchCardProps) {
+
   const getMatchColor = (percentage: number) => {
+    if (percentage >= 80) return 'bg-green-500';
+    if (percentage >= 60) return 'bg-blue-500';
+    if (percentage >= 40) return 'bg-yellow-500';
+    return 'bg-gray-400';
+  };
+
+  const getBadgeColor = (percentage: number) => {
     if (percentage >= 80) return 'bg-green-100 text-green-700 border-green-200';
     if (percentage >= 60) return 'bg-blue-100 text-blue-700 border-blue-200';
     if (percentage >= 40) return 'bg-yellow-100 text-yellow-700 border-yellow-200';
@@ -30,7 +38,8 @@ export function JobMatchCard({
 
   return (
     <div className="bg-card border border-border rounded-xl p-6 hover:shadow-lg transition-all group">
-      {/* Header with Match Badge */}
+
+      {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-2">
@@ -45,14 +54,22 @@ export function JobMatchCard({
             </div>
           </div>
         </div>
-        
-        {/* Match Percentage Badge */}
-        <div className={`px-4 py-2 rounded-lg border-2 font-semibold text-sm ${getMatchColor(matchPercentage)}`}>
+
+        {/* Match Badge */}
+        <div className={`px-4 py-2 rounded-lg border-2 font-semibold text-sm ${getBadgeColor(matchPercentage)}`}>
           {matchPercentage}% Match
         </div>
       </div>
 
-      {/* Job Details */}
+      {/* 🔥 NEW: PROGRESS BAR */}
+      <div className="w-full bg-gray-200 h-2 rounded-full mb-4">
+        <div
+          className={`${getMatchColor(matchPercentage)} h-2 rounded-full transition-all`}
+          style={{ width: `${matchPercentage}%` }}
+        />
+      </div>
+
+      {/* Job Info */}
       <div className="flex flex-wrap gap-3 mb-4 text-sm text-secondary">
         <div className="flex items-center gap-1">
           <MapPin className="w-4 h-4" />
@@ -79,8 +96,7 @@ export function JobMatchCard({
             {matchedSkills.slice(0, 4).map((skill) => (
               <Badge 
                 key={skill} 
-                variant="secondary" 
-                className="text-xs bg-primary/10 text-primary border-primary/20"
+                className="text-xs bg-green-100 text-green-700 border-green-300"
               >
                 {skill}
               </Badge>
@@ -94,7 +110,7 @@ export function JobMatchCard({
         </div>
       )}
 
-      {/* Action Buttons */}
+      {/* Actions */}
       <div className="flex gap-2 pt-4 border-t border-border">
         <Link to={`/jobs/${job.id}`} className="flex-1">
           <Button variant="outline" className="w-full">
@@ -102,6 +118,7 @@ export function JobMatchCard({
             <ArrowRight className="w-4 h-4 ml-2" />
           </Button>
         </Link>
+
         {showApplyButton && onApply && (
           <Button onClick={onApply} className="flex-1">
             Apply Now

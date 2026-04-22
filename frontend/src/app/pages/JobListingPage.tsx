@@ -5,7 +5,6 @@ import { JobCard } from '../components/JobCard';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Checkbox } from '../components/ui/checkbox';
-import { Slider } from '../components/ui/slider';
 import { Button } from '../components/ui/button';
 
 export function JobListingPage() {
@@ -14,17 +13,16 @@ export function JobListingPage() {
   const initialKeyword = searchParams.get('keyword') || '';
   const initialLocation = searchParams.get('location') || '';
 
-  const [jobs, setJobs] = useState<any[]>([]); // ✅ NEW
+  const [jobs, setJobs] = useState<any[]>([]);
   const [keyword, setKeyword] = useState(initialKeyword);
   const [location, setLocation] = useState(initialLocation);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
-  const [salaryRange, setSalaryRange] = useState([0, 200]);
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
 
   const jobTypes = ['Full-time', 'Part-time', 'Contract', 'Remote'];
   const allSkills = ['React', 'TypeScript', 'Node.js', 'Python', 'AWS', 'Figma', 'UI/UX Design'];
 
-  // 🔥 FETCH FROM BACKEND
+  // ✅ FETCH FROM BACKEND
   useEffect(() => {
     fetch("http://localhost:8081/api/jobs")
       .then(res => res.json())
@@ -35,9 +33,10 @@ export function JobListingPage() {
       .catch(err => console.error("API ERROR:", err));
   }, []);
 
-  // 🔥 FILTER USING API DATA
+  // ✅ FILTER USING CORRECT FIELD
   const filteredJobs = useMemo(() => {
     return jobs.filter((job) => {
+
       const matchesKeyword =
         keyword === '' ||
         job.title?.toLowerCase().includes(keyword.toLowerCase()) ||
@@ -51,9 +50,12 @@ export function JobListingPage() {
         selectedTypes.length === 0 ||
         selectedTypes.includes(job.type);
 
+      // ✅ FIXED HERE (skillsRequired instead of skills)
       const matchesSkills =
         selectedSkills.length === 0 ||
-        selectedSkills.some(skill => job.skills?.includes(skill));
+        selectedSkills.some(skill =>
+          job.skillsRequired?.toLowerCase().includes(skill.toLowerCase())
+        );
 
       return matchesKeyword && matchesLocation && matchesType && matchesSkills;
     });
@@ -76,7 +78,6 @@ export function JobListingPage() {
     setLocation('');
     setSelectedTypes([]);
     setSelectedSkills([]);
-    setSalaryRange([0, 200]);
   };
 
   return (
@@ -103,11 +104,7 @@ export function JobListingPage() {
                 </div>
 
                 {(keyword || location || selectedTypes.length > 0 || selectedSkills.length > 0) && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={clearFilters}
-                  >
+                  <Button variant="ghost" size="sm" onClick={clearFilters}>
                     <X className="w-4 h-4" />
                   </Button>
                 )}

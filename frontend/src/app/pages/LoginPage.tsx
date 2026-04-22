@@ -6,31 +6,45 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { useAuth } from '../context/AuthContext';
 import { toast } from 'sonner';
+import axios from 'axios';
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { setUser } = useAuth();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<'jobseeker' | 'recruiter'>('jobseeker');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!email || !password) {
       toast.error('Please fill in all fields');
       return;
     }
 
-    login(email, password, role);
-    toast.success('Welcome back!');
-    navigate('/dashboard');
+    try {
+      const res = await axios.post('http://localhost:8081/api/users/login', {
+        email,
+        password,
+        role
+      });
+
+      setUser(res.data);
+      localStorage.setItem("user", JSON.stringify(res.data));
+
+      toast.success('Welcome back!');
+      navigate('/dashboard');
+
+    } catch (err) {
+      toast.error('Invalid email, password or role');
+    }
   };
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center py-12 px-6">
       <div className="max-w-md w-full">
-        {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 mb-4">
             <div className="bg-primary p-3 rounded-xl">
@@ -41,32 +55,32 @@ export function LoginPage() {
           <p className="text-secondary">Sign in to your account to continue</p>
         </div>
 
-        {/* Login Form */}
         <div className="bg-card border border-border rounded-xl p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Role Selection */}
+
             <div>
               <Label className="mb-3 block">I am a</Label>
               <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
                   onClick={() => setRole('jobseeker')}
-                  className={`p-4 rounded-lg border-2 transition-all ${
+                  className={`p-4 rounded-lg border-2 ${
                     role === 'jobseeker'
                       ? 'border-primary bg-accent text-foreground'
-                      : 'border-border bg-background text-secondary hover:border-primary/50'
+                      : 'border-border bg-background text-secondary'
                   }`}
                 >
                   <p className="font-medium">Job Seeker</p>
                   <p className="text-xs mt-1">Looking for jobs</p>
                 </button>
+
                 <button
                   type="button"
                   onClick={() => setRole('recruiter')}
-                  className={`p-4 rounded-lg border-2 transition-all ${
+                  className={`p-4 rounded-lg border-2 ${
                     role === 'recruiter'
                       ? 'border-primary bg-accent text-foreground'
-                      : 'border-border bg-background text-secondary hover:border-primary/50'
+                      : 'border-border bg-background text-secondary'
                   }`}
                 >
                   <p className="font-medium">Recruiter</p>
@@ -75,7 +89,6 @@ export function LoginPage() {
               </div>
             </div>
 
-            {/* Email */}
             <div>
               <Label htmlFor="email">Email Address</Label>
               <Input
@@ -88,7 +101,6 @@ export function LoginPage() {
               />
             </div>
 
-            {/* Password */}
             <div>
               <Label htmlFor="password">Password</Label>
               <Input
@@ -101,20 +113,17 @@ export function LoginPage() {
               />
             </div>
 
-            {/* Forgot Password */}
             <div className="text-right">
               <a href="#" className="text-sm text-primary hover:underline">
                 Forgot password?
               </a>
             </div>
 
-            {/* Submit Button */}
             <Button type="submit" className="w-full" size="lg">
               Sign In
             </Button>
           </form>
 
-          {/* Register Link */}
           <div className="mt-6 text-center">
             <p className="text-sm text-secondary">
               Don't have an account?{' '}
@@ -123,13 +132,6 @@ export function LoginPage() {
               </Link>
             </p>
           </div>
-        </div>
-
-        {/* Demo Credentials */}
-        <div className="mt-6 bg-muted border border-border rounded-lg p-4">
-          <p className="text-xs text-secondary text-center">
-            Demo: Use any email/password combination to sign in
-          </p>
         </div>
       </div>
     </div>

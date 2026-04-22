@@ -13,18 +13,33 @@ public class UserService {
     @Autowired
     private UserRepository userRepository;
 
-    // Register new user
     public User registerUser(User user) {
+        User existingUser = userRepository.findByEmail(user.getEmail()).orElse(null);
+
+        if (existingUser != null) {
+            throw new RuntimeException("Email already exists");
+        }
+
         return userRepository.save(user);
     }
 
-    // Get all users
     public List<User> getAllUsers() {
         return userRepository.findAll();
     }
 
-    // Find user by email
     public User findByEmail(String email) {
         return userRepository.findByEmail(email).orElse(null);
+    }
+
+    public User loginUser(String email, String password, String role) {
+        User user = userRepository.findByEmail(email).orElse(null);
+
+        if (user != null &&
+            user.getPassword().equals(password) &&
+            user.getRole().equalsIgnoreCase(role)) {
+            return user;
+        }
+
+        return null;
     }
 }

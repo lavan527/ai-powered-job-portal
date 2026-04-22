@@ -15,13 +15,27 @@ public class UserController {
     @Autowired
     private UserService userService;
 
-    // Register new user
     @PostMapping("/register")
     public User registerUser(@RequestBody User user) {
         return userService.registerUser(user);
     }
 
-    // Get all users
+    @PostMapping("/login")
+    public User loginUser(@RequestBody User user) {
+
+        User loggedUser = userService.loginUser(
+                user.getEmail(),
+                user.getPassword(),
+                user.getRole()
+        );
+
+        if (loggedUser == null) {
+            throw new RuntimeException("Invalid email, password or role");
+        }
+
+        return loggedUser;
+    }
+
     @GetMapping
     public List<User> getAllUsers() {
         return userService.getAllUsers();
